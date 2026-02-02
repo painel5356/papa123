@@ -13,18 +13,15 @@ import android.view.WindowManager;
 import java.lang.reflect.Method;
 
 public class Main {
-    static WindowManager wm;
-    static OverlayView overlay;
-
     public static void main(String[] args) {
         Looper.prepareMainLooper();
         try {
-            // Obtendo Contexto do Sistema (Invisível para o Jogo)
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
-            Object thread = activityThreadClass.getMethod("currentActivityThread").invoke(null);
-            Context context = (Context) activityThreadClass.getMethod("getSystemContext").invoke(thread);
+            // Pegando o contexto via Reflexão (técnica anti-detecção)
+            Class<?> atClass = Class.forName("android.app.ActivityThread");
+            Object at = atClass.getMethod("currentActivityThread").invoke(null);
+            Context context = (Context) atClass.getMethod("getSystemContext").invoke(at);
 
-            wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 
             WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -35,36 +32,27 @@ public class Main {
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             );
-            params.gravity = Gravity.TOP | Gravity.LEFT;
 
             new Handler(Looper.getMainLooper()).post(() -> {
-                overlay = new OverlayView(context);
+                View overlay = new View(context) {
+                    Paint p = new Paint();
+                    @Override
+                    protected void onDraw(Canvas canvas) {
+                        super.onDraw(canvas);
+                        p.setColor(Color.RED);
+                        p.setStrokeWidth(5);
+                        p.setStyle(Paint.Style.STROKE);
+                        // Exemplo de ESP Box
+                        canvas.drawRect(200, 300, 400, 700, p); 
+                        p.setStyle(Paint.Style.FILL);
+                        p.setTextSize(40);
+                        canvas.drawText("PAPA123 | HP: 100", 200, 280, p);
+                        invalidate(); 
+                    }
+                };
                 wm.addView(overlay, params);
             });
-
             Looper.loop();
         } catch (Exception e) { e.printStackTrace(); }
     }
 }
-
-// Classe que DESENHA o ESP na tela
-class OverlayView extends View {
-    Paint paint = new Paint();
-    public OverlayView(Context context) { super(context); }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        paint.setColor(Color.GREEN);
-        paint.setStrokeWidth(2);
-        paint.setStyle(Paint.Style.STROKE);
-
-        // Exemplo: Desenha uma caixa (BOX) e Nome
-        canvas.drawRect(100, 100, 300, 500, paint);
-        paint.setStyle(Paint.Style.FILL);
-        paint.setTextSize(30);
-        canvas.drawText("PLAYER: PAPA_TESTE | HP: 100", 100, 90, paint);
-        
-        invalidate(); // Atualiza a tela constantemente
-    }
-                           }
